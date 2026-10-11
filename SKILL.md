@@ -1,11 +1,11 @@
 ---
 name: hiring-panel
-description: Runs a resume or CV past an independent hiring panel of sub-agents (an ATS screener, a hiring manager and five personas - recruiter, team lead, senior peer, rival applicant, CEO), aggregates their verdicts with a deterministic script, then rewrites the resume without inventing anything and writes Markdown and DOCX files with a change log. Use when the user wants a resume or CV reviewed, roasted, screened against a job description or job title, checked for ATS problems, or improved for a specific job, or types /hiring-panel.
+description: Runs a resume or CV past an independent hiring panel of sub-agents (an ATS screener, a hiring manager and five personas - recruiter, team lead, senior peer, rival applicant, CEO), aggregates their verdicts with a deterministic script, then rewrites the resume without inventing anything and writes it as LaTeX and a compiled PDF with a change log. Use when the user wants a resume or CV reviewed, roasted, screened against a job description or job title, checked for ATS problems, or improved for a specific job, or types /hiring-panel.
 argument-hint: <resume.pdf|.docx|.md|.txt> [--jd file|url|text] [--role "title"] [--region be|eu|us|auto] [--lang en|nl|fr] [--reviewers sonnet|opus|inherit] [--quick] [--recheck] [--seed N]
 license: MIT
 metadata:
   author: Maxikozie
-  version: 1.0.0
+  version: 1.1.0
 allowed-tools: Bash(python "${CLAUDE_SKILL_DIR}/scripts/panel.py" *), Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/panel.py" *), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/panel.py" *), Edit(./.hiring-panel/**)
 ---
 
@@ -88,7 +88,7 @@ Run `PANEL aggregate --run RUN`. It writes `panel.json`: NO DECISION handling, m
 
 1. Run `PANEL prompts --run RUN --phase rewrite`. It prints one job: spawn it the same way, leaving `model` out when it is `null`.
 2. Write the reply verbatim to its `reply_file` and run `PANEL submit-rewrite --run RUN`. It splits the reply into `<<<RESUME_MD>>>`, `<<<CHANGES_JSON>>>` and `<<<END>>>` sections.
-3. Run `PANEL finalize --run RUN`. It neutralises any number, date or language level that isn't in the original into a `[FILL IN: …]` marker, checks the rest and writes `resume.md`, `resume.docx` and `changes.md`.
+3. Run `PANEL finalize --run RUN`. It neutralises any number, date or language level that isn't in the original into a `[FILL IN: …]` marker, checks the rest and renders it into a fixed LaTeX template (`resume.tex`). Then it compiles `resume.pdf` with the first TeX engine on PATH (tectonic, xelatex, lualatex or pdflatex), with shell escape off, and reads the PDF back to check the text layer and page count. It also writes `changes.md`. Never edit `resume.tex` yourself. If no engine is found or the compile fails, finalize still succeeds, says so in a `note:` line, and the build log is in `RUN/rewrite/latex.log`.
 
 If `submit-rewrite` exits 1, or `finalize` exits 5, the rewrite gets **one** retry. Run `PANEL prompts --retry rewrite --run RUN`, spawn it, write the reply to the `reply_file`, run `submit-rewrite`, then `finalize`. After the retry, `finalize` goes ahead and lists whatever still fails.
 
@@ -98,7 +98,7 @@ Run `PANEL recheck-init --run RUN`, then repeat steps 3–6 with `--run RUN/rech
 
 ## 9. Report
 
-Run `PANEL report --run RUN` and show its output to the user exactly as printed. Add at most two lines of your own: no praise and no softening. Name the output files with links: `RUN/resume.md`, `RUN/resume.docx`, `RUN/changes.md` and `RUN/report.md`. If there are `[FILL IN]` markers, say the user must fill them in before sending.
+Run `PANEL report --run RUN` and show its output to the user exactly as printed. Add at most two lines of your own: no praise and no softening. Name the output files with links: `RUN/resume.pdf`, `RUN/resume.tex`, `RUN/changes.md` and `RUN/report.md`. Leave out `resume.pdf` when finalize said there is no PDF, and tell the user to install a TeX engine (`tectonic` is the smallest) and run `tectonic resume.tex` in the run folder. If there are `[FILL IN]` markers, say the user must fill them in before sending.
 
 ## Notes
 

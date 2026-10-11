@@ -1,6 +1,6 @@
 # hiring-panel
 
-A Claude Code skill that puts your resume in front of an independent hiring panel. Seven reviewer sub-agents judge it the way a real pile gets judged: an ATS screener, a hiring manager and five personas (HR recruiter, team lead, senior peer, rival applicant, CEO). A stdlib Python script validates and aggregates their verdicts deterministically. Then a rewrite agent improves the resume without inventing anything. You get Markdown, a Word file, a change log and a short report.
+A Claude Code skill that puts your resume in front of an independent hiring panel. Seven reviewer sub-agents judge it the way a real pile gets judged: an ATS screener, a hiring manager and five personas (HR recruiter, team lead, senior peer, rival applicant, CEO). A stdlib Python script validates and aggregates their verdicts deterministically. Then a rewrite agent improves the resume without inventing anything. You get the new resume as LaTeX and a compiled PDF, a change log and a short report.
 
 ## Install
 
@@ -20,7 +20,7 @@ If the folder already exists, update it instead:
 git -C ~/.claude/skills/hiring-panel pull
 ```
 
-Check the install. It checks Python 3.9+, the roster, rendering every brief, and which PDF/DOCX extractors are present:
+Check the install. It checks Python 3.9+, the roster, rendering every brief, which PDF/DOCX extractors are present and which TeX engine will build the PDF:
 
 ```bash
 python ~/.claude/skills/hiring-panel/scripts/panel.py doctor
@@ -73,7 +73,8 @@ Wrong flags fail fast with a specific message, such as `--region needs a value: 
    - Your name, email and phone must survive.
    - No tables, images, HTML or emoji.
 7. **Output**, in `./.hiring-panel/<timestamp>/`:
-   - `resume.md` and `resume.docx`: single column, Calibri 11, A4 or Letter, `[FILL IN]` highlighted.
+   - `resume.tex` and `resume.pdf`: single column, TeX Gyre Heros 10pt, A4 or Letter, `[FILL IN]` in bold red. The script renders the checked rewrite into a fixed template and escapes every character of resume text, so nothing in a resume or job ad can run as a TeX command. The engine runs with shell escape off. The PDF is then read back to check that its text layer parses and to count its pages against the region's limit.
+   - Without a TeX engine you still get `resume.tex`, and finalize says the PDF was skipped.
    - `changes.md`: every edit with who raised it.
    - `report.md`: the full report, with a short version in the chat.
    - The folder also holds every brief, raw reply, validation result and `panel.json`.
@@ -85,7 +86,7 @@ A committed real run is in [`examples/sample-run/`](examples/sample-run/), from 
 Your resume is not uploaded anywhere by this skill, but it is read by Claude: the redacted text goes to the Claude model as part of normal Claude Code use, like any file you show it. Before any agent sees it:
 
 - Name, email, phone, address, LinkedIn, GitHub, personal URLs and date of birth are replaced by tokens.
-- The real values stay in `input/pii.json` on your disk and are put back only in the final `resume.md`, `resume.docx` and `changes.md`.
+- The real values stay in `input/pii.json` on your disk and are put back only in the final `resume.tex`, `resume.pdf` and `changes.md`.
 - The script prints counts, never values.
 - `.hiring-panel/.gitignore` contains `*`, so a run folder can't be committed by accident.
 
@@ -118,6 +119,16 @@ pip install pypdf python-docx
 ```
 
 DOCX, Markdown and TXT need nothing extra. Scanned PDFs without a text layer are refused with a clear message, because an ATS can't read those either.
+
+The output PDF needs a TeX engine on your PATH. The script uses the first of `tectonic`, `xelatex`, `lualatex` and `pdflatex` it finds. [Tectonic](https://tectonic-typesetting.github.io/) is a single program that downloads only the packages it needs on the first compile (so that first run needs a network connection):
+
+```bash
+# Windows: unzip tectonic.exe from the latest release at github.com/tectonic-typesetting/tectonic/releases onto your PATH
+brew install tectonic      # macOS
+cargo install tectonic     # anywhere with Rust
+```
+
+MiKTeX or TeX Live work too. Set `HIRING_PANEL_TEX` to an engine's name or path to pick one, or to `none` to skip the PDF.
 
 ## Permissions
 
@@ -160,7 +171,7 @@ cd ~/.claude/skills/hiring-panel
 python -m pytest tests -q
 ```
 
-The suite covers flag parsing, extraction (with a hand-built PDF through `pdftotext`), PII redaction, validation, submit and retry, NO DECISION, merging and ranking, the fabrication guard, finalize, DOCX output and the report wording. Tests that need `pypdf` or `python-docx` skip when those aren't installed.
+The suite covers flag parsing, extraction (with a hand-built PDF through `pdftotext`), PII redaction, validation, submit and retry, NO DECISION, merging and ranking, the fabrication guard, finalize, LaTeX escaping and output, and the report wording. Tests that need `pypdf` or `python-docx` skip when those aren't installed. Most tests skip the PDF build; `tests/test_latex.py` compiles real PDFs in English, Dutch and French (including hostile text like `\input{...}`) when a TeX engine is on PATH, and skips otherwise.
 
 ## Uninstall
 

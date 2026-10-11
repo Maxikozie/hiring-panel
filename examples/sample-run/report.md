@@ -70,7 +70,7 @@ Quote: "Skills"
 Quote: "| React | ●●●●○ |"
 - ats (sev 2): The Skills section is a table with dot rating bars. A parser flattens it into 'React ●●●●○' strings, and the glyphs are noise. The self-ratings also hurt: TypeScript at 3/5 and Node.js at 2/5 invite a recruiter to screen on the weakest rating. The emoji in 'About me 🚀' and the non-standard heading 'Where I've worked' add further parse risk, since some systems look for 'Experience'. Fix: Replace the table with a plain-text list grouped by category, with no ratings, for example 'Languages: TypeScript, JavaScript, HTML, CSS/Sass'. Remove the emoji. Rename the headings to 'Profile' and 'Work experience'.
 
-Output: .hiring-panel/20261011-135435/ · resume.md, resume.docx, changes.md, report.md · 18 [FILL IN] to complete
+Output: .hiring-panel/20261011-135435/ · resume.pdf, resume.tex, changes.md, report.md · 18 [FILL IN] to complete
 
 **Before / after (recheck, same seed and pile)**
 

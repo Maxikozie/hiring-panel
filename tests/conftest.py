@@ -17,6 +17,12 @@ def fixtures():
     return FIXTURES
 
 
+@pytest.fixture(autouse=True)
+def no_tex(monkeypatch):
+    """finalize writes resume.tex but skips the PDF build; test_latex.py compiles for real when it can."""
+    monkeypatch.setenv("HIRING_PANEL_TEX", "none")
+
+
 @pytest.fixture
 def cwd(tmp_path, monkeypatch):
     """A clean working directory that the CLI sees as os.getcwd()."""

@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import zipfile
 
 import pytest
 
@@ -191,19 +190,20 @@ def test_finalize_end_to_end_with_one_retry(init_run, run_cli):
     code, out = run_cli(["finalize", "--run", run])
     assert code == 0, out
     assert "neutralised 1 number/date/level token" in out
-    final = open(os.path.join(run, "resume.md"), encoding="utf-8").read()
-    assert final.startswith("# Lotte Vermeulen\nKerkstraat 12, 9000 Gent | +32 470 12 34 56 | lotte.vermeulen@example.com")
-    assert "{{PII_" not in final and 'English: [FILL IN: verify — "C1" not in original]' in final
+    assert "no PDF: no TeX engine found" in out
+    assert not os.path.exists(os.path.join(run, "resume.md")) and not os.path.exists(os.path.join(run, "resume.docx"))
+    tex = open(os.path.join(run, "resume.tex"), encoding="utf-8").read()
+    assert r"{\LARGE\bfseries Lotte Vermeulen\par}" in tex
+    assert "Kerkstraat 12, 9000 Gent | +32 470 12 34 56 | lotte.vermeulen@example.com" in tex
+    assert "{{PII_" not in tex and r"English: \fillin{FILL IN: verify — \textquotedbl{}C1\textquotedbl{} not in original}" in tex
+    assert r"\section*{Experience}" in tex and r"\item{} Moved 40" in tex and r"\textbf{Python}" in tex
+    assert "a4paper" in tex and tex.rstrip().endswith(r"\end{document}")
     changes = open(os.path.join(run, "changes.md"), encoding="utf-8").read()
     assert "4 [FILL IN] markers to complete" in changes
     assert "(raised by " in changes and "## Needs your input" in changes and '"C1" (cefr)' in changes
-    with zipfile.ZipFile(os.path.join(run, "resume.docx")) as z:
-        doc = z.read("word/document.xml").decode("utf-8")
-        assert z.testzip() is None and "word/styles.xml" in z.namelist()
-    assert "Lotte Vermeulen" in doc and 'w:pStyle w:val="Heading1"' in doc and 'w:pStyle w:val="ListBullet"' in doc
-    assert '<w:highlight w:val="yellow"/>' in doc and "<w:b/>" in doc and 'w:w="11906"' in doc
     st = panel.load_state(run)
-    assert st["phase"] == "finalized" and st["fill_in"] == 4
+    assert st["phase"] == "finalized" and st["fill_in"] == 4 and st["pdf"] is False
+    assert "resume.tex (no PDF" in run_cli(["report", "--run", run])[1]
 
 
 def test_finalize_structural_failure_earns_one_retry(init_run, run_cli):
@@ -216,14 +216,5 @@ def test_finalize_structural_failure_earns_one_retry(init_run, run_cli):
     run_cli(["submit-rewrite", "--run", run], stdin=reply(ids, REWRITE_MD.replace("{{PII_PHONE}} | ", "")))
     code, out = run_cli(["finalize", "--run", run])
     assert code == 0 and "still failing after the retry: {{PII_PHONE}} is missing" in out
-    final = open(os.path.join(run, "resume.md"), encoding="utf-8").read()
-    assert "+32 470 12 34 56" in final.split("\n")[1]
-
-
-def test_docx_opens_with_python_docx(tmp_path):
-    docx = pytest.importorskip("docx")
-    p = str(tmp_path / "r.docx")
-    panel.md_to_docx(REWRITE_MD, p, "Letter")
-    d = docx.Document(p)
-    assert d.paragraphs[0].style.name == "Heading 1"
-    assert any(par.style.name == "List Bullet" for par in d.paragraphs)
+    body = open(os.path.join(run, "resume.tex"), encoding="utf-8").read().split("\\begin{document}\n")[1]
+    assert "+32 470 12 34 56" in body.split("\n")[1]

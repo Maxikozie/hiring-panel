@@ -120,7 +120,7 @@ def test_export_leaves_out_pii_and_absolute_paths(init_run, run_cli, cwd):
     code, out = run_cli(["export", "--run", run, "--to", dest])
     assert code == 0 and "left out: input/pii.json" in out
     assert not os.path.exists(os.path.join(dest, "input", "pii.json"))
-    assert os.path.exists(os.path.join(dest, "resume.docx")) and os.path.exists(os.path.join(dest, "recheck", "state.json"))
+    assert os.path.exists(os.path.join(dest, "resume.tex")) and os.path.exists(os.path.join(dest, "recheck", "state.json"))
     for root, _, files in os.walk(dest):
         for fn in files:
             if fn.endswith((".json", ".md", ".txt")):
